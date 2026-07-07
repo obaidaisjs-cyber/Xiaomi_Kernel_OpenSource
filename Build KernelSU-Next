@@ -1,0 +1,70 @@
+name: Build KernelSU-Next redwood
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+
+    - name: Checkout kernel source
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y \
+          bc \
+          bison \
+          flex \
+          make \
+          gcc-aarch64-linux-gnu \
+          libssl-dev \
+          libelf-dev \
+          python3 \
+          git \
+          curl \
+          ninja-build
+
+    - name: Install clang
+      run: |
+        sudo apt install -y clang lld llvm
+
+    - name: Add KernelSU-Next
+      run: |
+        curl -LSs \
+        https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh \
+        | bash -
+
+    - name: Configure redwood QGKI
+      run: |
+        export ARCH=arm64
+        export LLVM=1
+
+        make O=out gki_defconfig
+
+        ./scripts/kconfig/merge_config.sh \
+        -m out/.config \
+        arch/arm64/configs/vendor/redwood_QGKI.config
+
+    - name: Enable KernelSU
+      run: |
+        echo "CONFIG_KSU=y" >> out/.config
+
+        make O=out olddefconfig
+
+    - name: Build kernel
+      run: |
+        export ARCH=arm64
+        export LLVM=1
+
+        make -j$(nproc) O=out
+
+    - name: Upload kernel Image
+      uses: actions/upload-artifact@v4
+      with:
+        name: redwood-kernelsu-image
+        path: |
+          out/arch/arm64/boot/Image*
