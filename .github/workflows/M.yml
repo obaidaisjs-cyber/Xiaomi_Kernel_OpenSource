@@ -10,61 +10,68 @@ jobs:
 
     steps:
 
-    - name: Checkout kernel source
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 1
-        submodules: recursive
+      - name: Checkout kernel source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: recursive
 
-    - name: Find redwood config
-      run: |
-        echo "Searching for redwood config..."
-        find . -name "redwood_QGKI_defconfig"
+      - name: Check kernel source
+        run: |
+          echo "Current directory:"
+          pwd
+          echo "Files:"
+          ls -la
+          echo "Checking drivers:"
+          test -d drivers && echo "drivers found" || (echo "drivers missing" && exit 1)
 
-    - name: Install dependencies
-      run: |
-        sudo apt update
-        sudo apt install -y \
-          bc \
-          bison \
-          build-essential \
-          curl \
-          flex \
-          gcc-aarch64-linux-gnu \
-          libssl-dev \
-          libelf-dev \
-          pahole \
-          python3 \
-          zip
+      - name: Find redwood config
+        run: |
+          echo "Searching redwood config..."
+          find arch/arm64/configs -name "redwood*"
 
-        - name: Setup KernelSU-Next
-      run: |
-        cd $GITHUB_WORKSPACE
-        ls
-        test -d drivers || { echo "Kernel source not found"; exit 1; }
-        curl -LSs https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh | bash -
-    - name: Enable KernelSU
-      run: |
-        echo "CONFIG_KSU=y" >> arch/arm64/configs/vendor/redwood_QGKI_defconfig
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            bc \
+            bison \
+            build-essential \
+            curl \
+            flex \
+            gcc-aarch64-linux-gnu \
+            libssl-dev \
+            libelf-dev \
+            pahole \
+            python3 \
+            zip
 
-    - name: Build kernel
-      run: |
-        export ARCH=arm64
-        export SUBARCH=arm64
-        export CROSS_COMPILE=aarch64-linux-gnu-
+      - name: Setup KernelSU-Next
+        run: |
+          curl -LSs https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh | bash -
 
-        make O=out vendor/redwood_QGKI_defconfig
+      - name: Enable KernelSU
+        run: |
+          echo "CONFIG_KSU=y" >> arch/arm64/configs/vendor/redwood_QGKI_defconfig
 
-        make -j$(nproc) O=out
+      - name: Build kernel
+        run: |
+          export ARCH=arm64
+          export SUBARCH=arm64
+          export CROSS_COMPILE=aarch64-linux-gnu-
 
-    - name: Package Image
-      run: |
-        mkdir -p output
-        cp out/arch/arm64/boot/Image output/Image
-        gzip -c output/Image > output/Image.gz
+          make O=out vendor/redwood_QGKI_defconfig
 
-    - name: Upload Kernel Image
-      uses: actions/upload-artifact@v4
-      with:
-        name: redwood-kernel-image
-        path: output/Image.gz
+          make -j$(nproc) O=out
+
+      - name: Package Image
+        run: |
+          mkdir -p output
+          cp out/arch/arm64/boot/Image output/Image
+          gzip -c output/Image > output/Image.gz
+
+      - name: Upload Kernel Image
+        uses: actions/upload-artifact@v4
+        with:
+          name: redwood-kernel-image
+          path: output/Image.gz
