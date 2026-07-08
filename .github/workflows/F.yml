@@ -7,7 +7,6 @@ jobs:
   build:
     runs-on: ubuntu-22.04
     steps:
-
       - name: Install Toolchain
         run: |
           sudo apt-get update
@@ -29,7 +28,6 @@ jobs:
         run: |
           cd kernel
           export ARCH=arm64
-
           echo "CONFIG_KSU=y" >> arch/arm64/configs/vendor/redwood_QGKI.config
           echo "CONFIG_KPROBES=y" >> arch/arm64/configs/vendor/redwood_QGKI.config
           echo "CONFIG_HAVE_KPROBES=y" >> arch/arm64/configs/vendor/redwood_QGKI.config
@@ -44,8 +42,6 @@ jobs:
       - name: Disable broken coresight driver
         run: |
           cd kernel
-
-          sed -i '/CONFIG_CORESIGHT_BYTE_CNTR/d' arch/arm64/configs/redwood_merged_defconfig
           sed -i '/CONFIG_CORESIGHT/d' arch/arm64/configs/redwood_merged_defconfig
 
           echo "# CONFIG_CORESIGHT is not set" >> arch/arm64/configs/redwood_merged_defconfig
@@ -55,7 +51,6 @@ jobs:
       - name: Disable forbidden-warning wrapper
         run: |
           cd kernel
-
           find . -iname "gcc-wrapper.py" -print
 
           for f in $(find . -iname "gcc-wrapper.py"); do
@@ -67,22 +62,16 @@ jobs:
       - name: Attempt Build
         run: |
           cd kernel
-
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
 
           make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- redwood_merged_defconfig
 
-          make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
+          make O=out \
+          ARCH=arm64 \
+          CROSS_COMPILE=aarch64-linux-gnu- \
           KCFLAGS="-Wno-error" \
           -j$(nproc) 2>&1 | tee build_log.txt
-
-      - name: Check Kernel Image
-        if: always()
-        run: |
-          cd kernel
-          ls -lh out/arch/arm64/boot/
-          find out -name "Image*" -o -name "*dtb*"
 
       - name: Upload Build Log
         if: always()
@@ -92,12 +81,9 @@ jobs:
           path: kernel/build_log.txt
 
       - name: Upload Kernel Image
-        if: always()
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: kernel-image-ksu-next
-          path: |
-            kernel/out/arch/arm64/boot/Image.gz-dtb
-            kernel/out/arch/arm64/boot/Image.gz
-            kernel/out/arch/arm64/boot/Image
+          path: kernel/out/arch/arm64/boot/Image.gz-dtb
           if-no-files-found: ignore
