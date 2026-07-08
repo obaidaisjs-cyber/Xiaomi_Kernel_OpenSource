@@ -13,6 +13,8 @@ jobs:
       - name: Checkout kernel source
         uses: actions/checkout@v4
         with:
+          repository: MiCode/Xiaomi_Kernel_OpenSource
+          ref: redwood-oss
           fetch-depth: 1
           submodules: recursive
 
@@ -20,10 +22,11 @@ jobs:
         run: |
           echo "Current directory:"
           pwd
-          echo "Files:"
+          echo "Kernel files:"
           ls -la
-          echo "Checking drivers:"
-          test -d drivers && echo "drivers found" || (echo "drivers missing" && exit 1)
+          test -d drivers || exit 1
+          test -d arch || exit 1
+          echo "Kernel source OK"
 
       - name: Find redwood config
         run: |
