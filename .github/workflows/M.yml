@@ -62,7 +62,7 @@ jobs:
         gzip -9 output/Image
 
     - name: Upload Kernel Image
-      uses: actions/upload-artifact@v4
-      with:
-        name: KernelSU-Next-redwood
-        path: output/Image.gz
+      uses: actions/checkout@v4
+with:
+  fetch-depth: 0
+  submodules: recursive
