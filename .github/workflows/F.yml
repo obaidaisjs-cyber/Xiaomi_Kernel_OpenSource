@@ -1,4 +1,4 @@
-name: Check redwood kernel source
+name: Check redwood kernel
 
 on:
   workflow_dispatch:
@@ -9,45 +9,28 @@ jobs:
 
     steps:
 
-    - name: Checkout redwood kernel
-      uses: actions/checkout@v4
-      with:
-        repository: MiCode/Xiaomi_Kernel_OpenSource
-        ref: redwood-oss
-        fetch-depth: 1
-        submodules: recursive
+      - name: Checkout redwood kernel
+        uses: actions/checkout@v4
+        with:
+          repository: obaidaisj-cyber/Xiaomi_Kernel_OpenSource
+          ref: redwood-oss
+          fetch-depth: 1
+          submodules: recursive
 
-    - name: Verify kernel files
-      run: |
-        echo "Current directory:"
-        pwd
+      - name: Verify kernel files
+        run: |
+          echo "Checking kernel files..."
+          
+          echo "Current directory:"
+          pwd
 
-        echo "Listing files:"
-        ls -la
+          echo "Files:"
+          ls -la
 
-        echo "Checking required kernel folders..."
+          echo "Checking required folders..."
 
-        if [ -d "drivers" ]; then
-          echo "drivers/ OK"
-        else
-          echo "drivers/ MISSING"
-          exit 1
-        fi
+          test -d drivers
+          test -d arch
+          test -f Makefile
 
-        if [ -d "arch" ]; then
-          echo "arch/ OK"
-        else
-          echo "arch/ MISSING"
-          exit 1
-        fi
-
-        if [ -f "Makefile" ]; then
-          echo "Makefile OK"
-        else
-          echo "Makefile MISSING"
-          exit 1
-        fi
-
-        echo "======================"
-        echo "Kernel source is OK"
-        echo "======================"
+          echo "Kernel source OK"
