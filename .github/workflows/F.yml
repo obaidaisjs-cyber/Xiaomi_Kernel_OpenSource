@@ -5,6 +5,7 @@ on:
 
 jobs:
   build:
+
     runs-on: ubuntu-22.04
 
     steps:
@@ -29,7 +30,7 @@ jobs:
 
       - name: Clone Kernel Source
         run: |
-          git clone --depth=1 \
+          git clone --depth 1 \
           -b redwood-s-oss \
           https://github.com/MiCode/Xiaomi_Kernel_OpenSource.git kernel
 
@@ -38,11 +39,11 @@ jobs:
         run: |
           cd kernel
           curl -LSs \
-          "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" \
+          https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh \
           | bash -s legacy
 
 
-      - name: Prepare Kernel Config
+      - name: Merge Config Fragment
         run: |
           cd kernel
 
@@ -53,22 +54,14 @@ jobs:
           echo "CONFIG_HAVE_KPROBES=y" >> arch/arm64/configs/vendor/redwood_QGKI.config
           echo "CONFIG_KPROBE_EVENTS=y" >> arch/arm64/configs/vendor/redwood_QGKI.config
 
-          scripts/kconfig/merge_config.sh \
-          -m \
-          arch/arm64/configs/gki_defconfig \
-          arch/arm64/configs/vendor/redwood_QGKI.config
 
-          cp .config arch/arm64/configs/redwood_merged_defconfig
-
-
-      - name: Disable problematic options
+      - name: Disable problematic option
         run: |
           cd kernel
 
-          sed -i '/CONFIG_CORESIGHT_BYTE_CNTR/d' arch/arm64/configs/redwood_merged_defconfig
+          sed -i '/CONFIG_CORESIGHT_BYTE_CNTR/d' arch/arm64/configs/vendor/redwood_QGKI.config
 
-          echo "# CONFIG_CORESIGHT_BYTE_CNTR is not set" \
-          >> arch/arm64/configs/redwood_merged_defconfig
+          echo "# CONFIG_CORESIGHT_BYTE_CNTR is not set" >> arch/arm64/configs/vendor/redwood_QGKI.config
 
 
       - name: Build Kernel
@@ -81,29 +74,19 @@ jobs:
           make O=out \
           ARCH=arm64 \
           CROSS_COMPILE=aarch64-linux-gnu- \
-          redwood_merged_defconfig
+          vendor/redwood_QGKI_defconfig
 
 
           make O=out \
           ARCH=arm64 \
           CROSS_COMPILE=aarch64-linux-gnu- \
           KCFLAGS="-Wno-error" \
-          -j$(nproc) \
-          2>&1 | tee build_log.txt
+          -j$(nproc) 2>&1 | tee build_log.txt
 
 
-          if [ ${PIPESTATUS[0]} -ne 0 ]; then
-            echo "Kernel build failed"
-            exit 1
-          fi
+          echo "========== Kernel output =========="
 
-
-          echo "===== Searching kernel output ====="
-
-          find out/arch/arm64/boot \
-          -type f \
-          \( -name "Image*" -o -name "*.dtb" \)
-
+          find out/arch/arm64/boot -type f
 
 
       - name: Upload Build Log
@@ -114,11 +97,11 @@ jobs:
           path: kernel/build_log.txt
 
 
-      - name: Upload Kernel Files
+      - name: Upload Kernel Image
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: redwood-kernel-output
+          name: redwood-kernel-files
           path: |
             kernel/out/arch/arm64/boot/Image
             kernel/out/arch/arm64/boot/Image.gz
