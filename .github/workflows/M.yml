@@ -15,11 +15,10 @@ jobs:
       with:
         fetch-depth: 1
 
-    - name: Show kernel files
+    - name: Find redwood config
       run: |
-        echo "Checking defconfig..."
-        ls arch/arm64/configs/vendor
-        test -f arch/arm64/configs/vendor/redwood_QGKI_defconfig
+        echo "Searching for redwood config..."
+        find . -name "*redwood*" -o -name "redwood_QGKI_defconfig"
 
     - name: Install dependencies
       run: |
