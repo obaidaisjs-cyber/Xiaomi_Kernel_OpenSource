@@ -1,4 +1,4 @@
-name: Build KernelSU-Next redwood
+name: KernelSU-Next redwood Build
 
 on:
   workflow_dispatch:
@@ -11,60 +11,59 @@ jobs:
 
     - name: Checkout kernel source
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+        submodules: recursive
+
+    - name: Check kernel source
+      run: |
+        echo "Checking kernel files..."
+        ls
+        test -d drivers
+        test -d arch
+        echo "Kernel source OK"
+
+    - name: Find redwood config
+      run: |
+        echo "Searching config..."
+        find arch/arm64/configs -name "*redwood*"
 
     - name: Install dependencies
       run: |
         sudo apt update
         sudo apt install -y \
-          bc \
-          bison \
-          flex \
-          make \
-          gcc-aarch64-linux-gnu \
-          libssl-dev \
-          libelf-dev \
-          python3 \
-          git \
-          curl \
-          ninja-build
+        bc \
+        bison \
+        build-essential \
+        curl \
+        flex \
+        gcc-aarch64-linux-gnu \
+        libssl-dev \
+        libelf-dev \
+        pahole \
+        python3 \
+        zip
 
-    - name: Install clang
+    - name: Setup KernelSU-Next
       run: |
-        sudo apt install -y clang lld llvm
-
-    - name: Add KernelSU-Next
-      run: |
-        curl -LSs \
-        https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh \
-        | bash -
-
-    - name: Configure redwood QGKI
-      run: |
-        export ARCH=arm64
-        export LLVM=1
-
-        make O=out gki_defconfig
-
-        ./scripts/kconfig/merge_config.sh \
-        -m out/.config \
-        arch/arm64/configs/vendor/redwood_QGKI.config
+        curl -LSs https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh | bash -
 
     - name: Enable KernelSU
       run: |
-        echo "CONFIG_KSU=y" >> out/.config
-
-        make O=out olddefconfig
+        echo "CONFIG_KSU=y" >> arch/arm64/configs/vendor/redwood_QGKI_defconfig
 
     - name: Build kernel
       run: |
         export ARCH=arm64
-        export LLVM=1
+        export SUBARCH=arm64
+        export CROSS_COMPILE=aarch64-linux-gnu-
+
+        make O=out vendor/redwood_QGKI_defconfig
 
         make -j$(nproc) O=out
 
-    - name: Upload kernel Image
+    - name: Upload Image
       uses: actions/upload-artifact@v4
       with:
-        name: redwood-kernelsu-image
-        path: |
-          out/arch/arm64/boot/Image*
+        name: redwood-kernel-image
+        path: out/arch/arm64/boot/Image
