@@ -1,36 +1,71 @@
-name: Check redwood kernel
+name: Build KernelSU-Next redwood
 
 on:
   workflow_dispatch:
 
 jobs:
-  check:
+  build:
     runs-on: ubuntu-22.04
 
     steps:
 
-      - name: Checkout redwood kernel
-        uses: actions/checkout@v4
-        with:
-          repository: obaidaisj-cyber/Xiaomi_Kernel_OpenSource
-          ref: redwood-oss
-          fetch-depth: 1
-          submodules: recursive
+    - name: Checkout Xiaomi kernel source
+      uses: actions/checkout@v4
+      with:
+        repository: obaidaisj-cyber/Xiaomi_Kernel_OpenSource
+        ref: redwood-s-oss
+        fetch-depth: 1
+        submodules: true
 
-      - name: Verify kernel files
-        run: |
-          echo "Checking kernel files..."
-          
-          echo "Current directory:"
-          pwd
+    - name: Check kernel source
+      run: |
+        echo "Current directory:"
+        pwd
+        ls -la
+        echo "Checking drivers:"
+        test -d drivers
+        echo "Kernel source OK"
 
-          echo "Files:"
-          ls -la
+    - name: Find redwood config
+      run: |
+        find arch/arm64/configs -iname "*redwood*" -o -iname "*vendor*"
 
-          echo "Checking required folders..."
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y \
+        bc \
+        bison \
+        build-essential \
+        curl \
+        flex \
+        gcc-aarch64-linux-gnu \
+        libssl-dev \
+        libelf-dev \
+        pahole \
+        python3 \
+        zip
 
-          test -d drivers
-          test -d arch
-          test -f Makefile
+    - name: Setup KernelSU-Next
+      run: |
+        curl -LSs https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh | bash -
 
-          echo "Kernel source OK"
+    - name: Enable KernelSU
+      run: |
+        echo "CONFIG_KSU=y" >> arch/arm64/configs/vendor/redwood_GKI_defconfig
+
+    - name: Build kernel
+      run: |
+        export ARCH=arm64
+        export SUBARCH=arm64
+        export CROSS_COMPILE=aarch64-linux-gnu-
+
+        make O=out vendor/redwood_GKI_defconfig
+
+        make -j$(nproc) O=out
+
+    - name: Upload Image
+      uses: actions/upload-artifact@v4
+      with:
+        name: redwood-kernel-image
+        path: out/arch/arm64/boot/Image
