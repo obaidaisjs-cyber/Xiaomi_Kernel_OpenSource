@@ -14,11 +14,12 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 1
+        submodules: recursive
 
     - name: Find redwood config
       run: |
         echo "Searching for redwood config..."
-        find . -name "*redwood*" -o -name "redwood_QGKI_defconfig"
+        find . -name "redwood_QGKI_defconfig"
 
     - name: Install dependencies
       run: |
@@ -34,7 +35,6 @@ jobs:
           libelf-dev \
           pahole \
           python3 \
-          git \
           zip
 
     - name: Setup KernelSU-Next
@@ -59,10 +59,10 @@ jobs:
       run: |
         mkdir -p output
         cp out/arch/arm64/boot/Image output/Image
-        gzip -9 output/Image
+        gzip -c output/Image > output/Image.gz
 
     - name: Upload Kernel Image
-      uses: actions/checkout@v4
-with:
-  fetch-depth: 0
-  submodules: recursive
+      uses: actions/upload-artifact@v4
+      with:
+        name: redwood-kernel-image
+        path: output/Image.gz
