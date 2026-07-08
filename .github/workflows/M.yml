@@ -12,11 +12,15 @@ jobs:
 
       - name: Clone Xiaomi kernel source
         run: |
-          git clone --depth=1 --branch redwood-oss https://github.com/MiCode/Xiaomi_Kernel_OpenSource.git kernel
+          git clone --depth=1 https://github.com/MiCode/Xiaomi_Kernel_OpenSource.git kernel
           cd kernel
-          ls
           test -d drivers
           test -d arch
+
+      - name: Find redwood config
+        run: |
+          cd kernel
+          find arch -name "redwood*defconfig"
 
       - name: Install dependencies
         run: |
@@ -37,7 +41,7 @@ jobs:
       - name: Setup KernelSU-Next
         working-directory: kernel
         run: |
-          curl -LSs https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh | bash -
+          curl -LSs https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh | bash
 
       - name: Enable KernelSU
         working-directory: kernel
@@ -55,15 +59,8 @@ jobs:
 
           make -j$(nproc) O=out
 
-      - name: Collect Image
-        working-directory: kernel
-        run: |
-          mkdir -p output
-          cp out/arch/arm64/boot/Image output/Image
-          gzip -c output/Image > output/Image.gz
-
-      - name: Upload kernel
+      - name: Upload Image
         uses: actions/upload-artifact@v4
         with:
-          name: redwood-KernelSU-Next
-          path: kernel/output/Image.gz
+          name: redwood-kernel
+          path: kernel/out/arch/arm64/boot/Image
