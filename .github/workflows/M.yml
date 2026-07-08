@@ -9,45 +9,37 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-
       - name: Checkout kernel source
         uses: actions/checkout@v4
         with:
-          repository: MiCode/Xiaomi_Kernel_OpenSource
-          ref: redwood-oss
           fetch-depth: 1
-          submodules: recursive
+          submodules: false
 
-      - name: Check kernel source
+      - name: Initialize submodules
         run: |
-          echo "Current directory:"
-          pwd
-          echo "Kernel files:"
-          ls -la
-          test -d drivers || exit 1
-          test -d arch || exit 1
-          echo "Kernel source OK"
+          git submodule sync --recursive
+          git submodule update --init --recursive || true
 
       - name: Find redwood config
         run: |
-          echo "Searching redwood config..."
-          find arch/arm64/configs -name "redwood*"
+          echo "Searching config..."
+          find . -path "*configs*" -name "*redwood*"
 
       - name: Install dependencies
         run: |
           sudo apt update
           sudo apt install -y \
-            bc \
-            bison \
-            build-essential \
-            curl \
-            flex \
-            gcc-aarch64-linux-gnu \
-            libssl-dev \
-            libelf-dev \
-            pahole \
-            python3 \
-            zip
+          bc \
+          bison \
+          build-essential \
+          curl \
+          flex \
+          gcc-aarch64-linux-gnu \
+          libssl-dev \
+          libelf-dev \
+          pahole \
+          python3 \
+          zip
 
       - name: Setup KernelSU-Next
         run: |
@@ -64,7 +56,6 @@ jobs:
           export CROSS_COMPILE=aarch64-linux-gnu-
 
           make O=out vendor/redwood_QGKI_defconfig
-
           make -j$(nproc) O=out
 
       - name: Package Image
@@ -77,4 +68,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: redwood-kernel-image
-          path: output/Image.gz
+          path: output
